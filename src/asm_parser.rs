@@ -11,14 +11,12 @@
 //! This module parses eBPF assembly language source code.
 
 use combine::{
-    attempt, between,
-    char::{alpha_num, char, digit, hex_digit, spaces, string},
-    combine_parse_partial, combine_parser_impl,
-    easy::{Error, Errors, Info},
-    eof, many, many1, one_of, optional, parse_mode, parser, sep_by, skip_many,
-    stream::state::{SourcePosition, State},
-    Parser, Stream,
+    parser, Parser, EasyParser,
+    optional, one_of, between, attempt, eof, many, sep_by, skip_many, many1
 };
+use combine::easy::{Error, Errors, Info};
+use combine::stream::{Stream, position::{self, SourcePosition}};
+use combine::parser::char::{char, digit, hex_digit, alpha_num, string, spaces};
 
 /// Operand of an instruction.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -46,19 +44,19 @@ pub enum Statement {
 }
 
 parser! {
-    fn ident[I]()(I) -> String where [I: Stream<Item=char>] {
+    fn ident[I]()(I) -> String where [I: Stream<Token=char>] {
         many1(alpha_num().or(char('_')))
     }
 }
 
 parser! {
-    fn mnemonic[I]()(I) -> String where [I: Stream<Item=char>] {
+    fn mnemonic[I]()(I) -> String where [I: Stream<Token=char>] {
         many1(alpha_num())
     }
 }
 
 parser! {
-    fn integer[I]()(I) -> i64 where [I: Stream<Item=char>] {
+    fn integer[I]()(I) -> i64 where [I: Stream<Token=char>] {
         let sign = optional(one_of("-+".chars())).map(|x| match x {
             Some('-') => -1,
             _ => 1,
@@ -73,7 +71,7 @@ parser! {
 }
 
 parser! {
-    fn register[I]()(I) -> i64 where [I: Stream<Item=char>] {
+    fn register[I]()(I) -> i64 where [I: Stream<Token=char>] {
         char('r')
             .with(many1(digit()))
             .map(|x: String| x.parse::<i64>().unwrap_or(0))
@@ -81,7 +79,7 @@ parser! {
 }
 
 parser! {
-    fn operand[I]()(I) -> Operand where [I: Stream<Item=char>] {
+    fn operand[I]()(I) -> Operand where [I: Stream<Token=char>] {
         let register_operand = register().map(Operand::Register);
         let immediate = integer().map(Operand::Integer);
         let memory = between(
@@ -99,14 +97,14 @@ parser! {
 }
 
 parser! {
-    fn label[I]()(I) -> Statement where [I: Stream<Item=char>] {
+    fn label[I]()(I) -> Statement where [I: Stream<Token=char>] {
         (ident(), char(':'))
             .map(|t| Statement::Label { name: t.0 })
     }
 }
 
 parser! {
-    fn instruction[I]()(I) -> Statement where [I: Stream<Item=char>] {
+    fn instruction[I]()(I) -> Statement where [I: Stream<Token=char>] {
         let operands = sep_by(operand(), char(',').skip(skip_many(char(' '))));
         (mnemonic().skip(skip_many(char(' '))), operands)
             .map(|t| Statement::Instruction { name: t.0, operands: t.1 })
@@ -118,7 +116,7 @@ fn format_info(info: &Info<char, &str>) -> String {
         Info::Token(x) => format!("{:?}", x),
         Info::Range(x) => format!("{:?}", x),
         Info::Owned(ref x) => x.clone(),
-        Info::Borrowed(x) => x.to_string(),
+        Info::Static(x) => x.to_string(),
     }
 }
 
@@ -152,7 +150,7 @@ pub fn parse(input: &str) -> Result<Vec<Statement>, String> {
     match spaces()
         .with(many(attempt(label()).or(instruction()).skip(spaces())))
         .skip(eof())
-        .easy_parse(State::with_positioner(input, SourcePosition::default()))
+        .easy_parse(position::Stream::new(input))
     {
         Ok((insts, _)) => Ok(insts),
         Err(err) => Err(format_parse_error(&err)),
