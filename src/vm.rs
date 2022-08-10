@@ -538,8 +538,8 @@ impl<'a, V: Verifier, E: UserDefinedError, I: InstructionMeter> EbpfVm<'a, V, E,
         unsafe {
             libc::memcpy(
                 vm.syscall_context_objects.as_mut_ptr() as _,
-                std::mem::transmute::<_, _>(&vm.memory_mapping),
-                std::mem::size_of::<MemoryMapping>(),
+                mem::transmute::<_, _>(&vm.memory_mapping),
+                mem::size_of::<MemoryMapping>(),
             );
         }
         Ok(vm)
@@ -608,11 +608,11 @@ impl<'a, V: Verifier, E: UserDefinedError, I: InstructionMeter> EbpfVm<'a, V, E,
 
         for syscall in syscall_registry.entries.values() {
             let syscall_object_init_fn: SyscallInit<C, E> =
-                unsafe { std::mem::transmute(syscall.init) };
+                unsafe { mem::transmute(syscall.init) };
             let syscall_context_object: Box<dyn SyscallObject<E> + 'a> =
                 syscall_object_init_fn(syscall_context.clone());
             let fat_ptr: DynTraitFatPointer =
-                unsafe { std::mem::transmute(&*syscall_context_object) };
+                unsafe { mem::transmute(&*syscall_context_object) };
             let slot = syscall_registry
                 .lookup_context_object_slot(fat_ptr.vtable.methods[0] as u64)
                 .ok_or(EbpfError::SyscallNotRegistered(

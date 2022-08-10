@@ -307,10 +307,6 @@ impl ElfSectionHeader for SectionHeader {
         self.sh_name as _
     }
 
-    fn sh_flags(&self) -> Elf64Xword {
-        self.sh_flags
-    }
-
     fn sh_addr(&self) -> Elf64Addr {
         self.sh_addr
     }
@@ -321,6 +317,10 @@ impl ElfSectionHeader for SectionHeader {
 
     fn sh_size(&self) -> Elf64Xword {
         self.sh_size
+    }
+
+    fn sh_flags(&self) -> Elf64Xword {
+        self.sh_flags
     }
 
     fn sh_type(&self) -> Elf64Word {
@@ -470,10 +470,6 @@ impl ElfSectionHeader for Elf64Shdr {
         self.sh_name as _
     }
 
-    fn sh_flags(&self) -> Elf64Xword {
-        self.sh_flags
-    }
-
     fn sh_addr(&self) -> Elf64Addr {
         self.sh_addr
     }
@@ -484,6 +480,10 @@ impl ElfSectionHeader for Elf64Shdr {
 
     fn sh_size(&self) -> Elf64Xword {
         self.sh_size
+    }
+
+    fn sh_flags(&self) -> Elf64Xword {
+        self.sh_flags
     }
 
     fn sh_type(&self) -> Elf64Word {

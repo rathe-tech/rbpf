@@ -19,9 +19,6 @@
 
 // These are unit tests for the eBPF “verifier”.
 
-extern crate solana_rbpf;
-extern crate thiserror;
-
 use solana_rbpf::{
     assembler::assemble,
     ebpf,

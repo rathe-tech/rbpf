@@ -16,11 +16,6 @@
 // extern crate elf;
 // use std::path::PathBuf;
 
-extern crate byteorder;
-extern crate libc;
-extern crate solana_rbpf;
-extern crate test_utils;
-
 use solana_rbpf::{
     elf::Executable,
     fuzz::fuzz,

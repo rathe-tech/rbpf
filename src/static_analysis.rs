@@ -85,7 +85,7 @@ pub enum DfgEdgeKind {
     ///
     /// E.g. the destination reads a resource, written by the source.
     Filled,
-    /// This kind incurrs no actual data-flow
+    /// This kind incurs no actual data-flow
     ///
     /// E.g. the destination overwrites a resource, written by the source.
     Empty,

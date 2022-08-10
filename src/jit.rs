@@ -14,8 +14,6 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![allow(unreachable_code)]
 
-extern crate libc;
-
 use std::{
     fmt::{Debug, Error as FormatterError, Formatter},
     mem,
@@ -50,7 +48,7 @@ struct JitProgramSections {
     page_size: usize,
     /// A `*const u8` pointer into the text_section for each BPF instruction
     pc_section: &'static mut [usize],
-    /// The x86 machinecode
+    /// The x86 machine code
     text_section: &'static mut [u8],
 }
 
@@ -100,7 +98,7 @@ impl JitProgramSections {
             let page_size = libc::sysconf(libc::_SC_PAGESIZE) as usize;
             let pc_loc_table_size = round_to_page_size(pc * 8, page_size);
             let over_allocated_code_size = round_to_page_size(code_size, page_size);
-            let mut raw: *mut libc::c_void = std::ptr::null_mut();
+            let mut raw: *mut libc::c_void = ptr::null_mut();
             libc_error_guard!(mmap, &mut raw, pc_loc_table_size + over_allocated_code_size, libc::PROT_READ | libc::PROT_WRITE, libc::MAP_ANONYMOUS | libc::MAP_PRIVATE, 0, 0);
             Ok(Self {
                 page_size,
@@ -121,7 +119,7 @@ impl JitProgramSections {
                 if over_allocated_code_size > code_size {
                     libc_error_guard!(munmap, raw.add(pc_loc_table_size).add(code_size) as *mut _, over_allocated_code_size - code_size);
                 }
-                std::ptr::write_bytes(raw.add(pc_loc_table_size).add(text_section_usage), 0xcc, code_size - text_section_usage); // Fill with debugger traps
+                ptr::write_bytes(raw.add(pc_loc_table_size).add(text_section_usage), 0xcc, code_size - text_section_usage); // Fill with debugger traps
                 self.text_section = std::slice::from_raw_parts_mut(raw.add(pc_loc_table_size), text_section_usage);
                 libc_error_guard!(mprotect, self.pc_section.as_mut_ptr() as *mut _, pc_loc_table_size, libc::PROT_READ);
                 libc_error_guard!(mprotect, self.text_section.as_mut_ptr() as *mut _, code_size, libc::PROT_EXEC | libc::PROT_READ);
@@ -159,14 +157,14 @@ pub struct JitProgram<E: UserDefinedError, I: InstructionMeter> {
 }
 
 impl<E: UserDefinedError, I: InstructionMeter> Debug for JitProgram<E, I> {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
         fmt.write_fmt(format_args!("JitProgram {:?}", &self.main as *const _))
     }
 }
 
 impl<E: UserDefinedError, I: InstructionMeter> PartialEq for JitProgram<E, I> {
     fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self.main as *const u8, other.main as *const u8)
+        ptr::eq(self.main as *const u8, other.main as *const u8)
     }
 }
 
@@ -401,7 +399,7 @@ fn emit_stopwatch(jit: &mut JitCompiler, begin: bool) {
     emit_ins(jit, X86Instruction::pop(RDX));
 }
 
-/* Explaination of the Instruction Meter
+/* Explanation of the Instruction Meter
 
     The instruction meter serves two purposes: First, measure how many BPF instructions are
     executed (profiling) and second, limit this number by stopping the program with an exception
@@ -893,7 +891,7 @@ impl IndexMut<usize> for JitCompiler {
     }
 }
 
-impl std::fmt::Debug for JitCompiler {
+impl Debug for JitCompiler {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), FormatterError> {
         fmt.write_str("JIT text_section: [")?;
         for i in self.result.text_section as &[u8] {
@@ -930,7 +928,7 @@ impl JitCompiler {
 
         // Scan through program to find actual number of instructions
         let mut pc = 0;
-        while (pc + 1) * ebpf::INSN_SIZE <= program.len() {
+        while (pc + 1) * INSN_SIZE <= program.len() {
             let insn = ebpf::get_insn_unchecked(program, pc);
             pc += match insn.opc {
                 ebpf::LD_DW_IMM => 2,
@@ -961,7 +959,7 @@ impl JitCompiler {
             last_instruction_meter_validation_pc: 0,
             next_noop_insertion: if config.noop_instruction_rate == 0 { u32::MAX } else { diversification_rng.gen_range(0..config.noop_instruction_rate * 2) },
             program_vm_addr: 0,
-            anchors: [std::ptr::null(); ANCHOR_COUNT],
+            anchors: [ptr::null(); ANCHOR_COUNT],
             config: *config,
             diversification_rng,
             stopwatch_is_active: false,
@@ -981,7 +979,7 @@ impl JitCompiler {
         // Have these in front so that the linear search of ANCHOR_TRANSLATE_PC does not terminate early
         self.generate_subroutines::<E, I>()?;
 
-        while self.pc * ebpf::INSN_SIZE < program.len() {
+        while self.pc * INSN_SIZE < program.len() {
             if self.offset_in_text_section + MAX_MACHINE_CODE_LENGTH_PER_INSTRUCTION > self.result.text_section.len() {
                 return Err(EbpfError::ExhaustedTextSegment(self.pc));
             }
@@ -1785,7 +1783,7 @@ mod tests {
     #[test]
     fn test_code_length_estimate() {
         const INSTRUCTION_COUNT: usize = 256;
-        let mut prog = [0; ebpf::INSN_SIZE * INSTRUCTION_COUNT];
+        let mut prog = [0; INSN_SIZE * INSTRUCTION_COUNT];
     
         let empty_program_machine_code_length = {
             prog[0] = ebpf::EXIT;
@@ -1797,11 +1795,11 @@ mod tests {
     
         for opcode in 0..255 {
             for pc in 0..INSTRUCTION_COUNT {
-                prog[pc * ebpf::INSN_SIZE] = opcode;
-                prog[pc * ebpf::INSN_SIZE + 1] = 0x88;
-                prog[pc * ebpf::INSN_SIZE + 2] = 0xFF;
-                prog[pc * ebpf::INSN_SIZE + 3] = 0xFF;
-                LittleEndian::write_u32(&mut prog[pc * ebpf::INSN_SIZE + 4..], match opcode {
+                prog[pc * INSN_SIZE] = opcode;
+                prog[pc * INSN_SIZE + 1] = 0x88;
+                prog[pc * INSN_SIZE + 2] = 0xFF;
+                prog[pc * INSN_SIZE + 3] = 0xFF;
+                LittleEndian::write_u32(&mut prog[pc * INSN_SIZE + 4..], match opcode {
                     0x8D => 8,
                     0xD4 | 0xDC => 16,
                     _ => 0xFFFFFFFF,

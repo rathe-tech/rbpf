@@ -18,9 +18,10 @@
 //! <https://www.kernel.org/doc/Documentation/networking/filter.txt>, or for a shorter version of
 //! the list of the operation codes: <https://github.com/iovisor/bpf-docs/blob/master/eBPF.md>
 
-use byteorder::{ByteOrder, LittleEndian};
-use hash32::{Hash, Hasher, Murmur3Hasher};
 use std::fmt;
+use std::hash::Hasher;
+use byteorder::{ByteOrder, LittleEndian};
+use hash32::{Hasher as Hasher32, Murmur3Hasher};
 
 /// SBF version flag
 pub const EF_SBF_V2: u32 = 0x20;
@@ -578,6 +579,6 @@ pub fn augment_lddw_unchecked(prog: &[u8], insn: &mut Insn) {
 /// eBPF `call` instruction's imm field.
 pub fn hash_symbol_name(name: &[u8]) -> u32 {
     let mut hasher = Murmur3Hasher::default();
-    Hash::hash_slice(name, &mut hasher);
-    hasher.finish()
+    hasher.write(name);
+    hasher.finish32()
 }

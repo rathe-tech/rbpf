@@ -16,13 +16,6 @@
     html_favicon_url = "https://raw.githubusercontent.com/qmonnet/rbpf/master/misc/rbpf.ico"
 )]
 
-extern crate byteorder;
-extern crate combine;
-extern crate hash32;
-extern crate log;
-extern crate rand;
-extern crate thiserror;
-
 pub mod aligned_memory;
 mod asm_parser;
 pub mod assembler;
