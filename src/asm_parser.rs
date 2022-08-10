@@ -10,13 +10,16 @@
 
 //! This module parses eBPF assembly language source code.
 
-use combine::{
-    parser, Parser, EasyParser,
-    optional, one_of, between, attempt, eof, many, sep_by, skip_many, many1
-};
 use combine::easy::{Error, Errors, Info};
-use combine::stream::{Stream, position::{self, SourcePosition}};
-use combine::parser::char::{char, digit, hex_digit, alpha_num, string, spaces};
+use combine::parser::char::{alpha_num, char, digit, hex_digit, spaces, string};
+use combine::stream::{
+    position::{self, SourcePosition},
+    Stream,
+};
+use combine::{
+    attempt, between, eof, many, many1, one_of, optional, parser, sep_by, skip_many, EasyParser,
+    Parser,
+};
 
 /// Operand of an instruction.
 #[derive(Clone, Debug, PartialEq, Eq)]

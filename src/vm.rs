@@ -607,12 +607,10 @@ impl<'a, V: Verifier, E: UserDefinedError, I: InstructionMeter> EbpfVm<'a, V, E,
             .get_syscall_registry();
 
         for syscall in syscall_registry.entries.values() {
-            let syscall_object_init_fn: SyscallInit<C, E> =
-                unsafe { mem::transmute(syscall.init) };
+            let syscall_object_init_fn: SyscallInit<C, E> = unsafe { mem::transmute(syscall.init) };
             let syscall_context_object: Box<dyn SyscallObject<E> + 'a> =
                 syscall_object_init_fn(syscall_context.clone());
-            let fat_ptr: DynTraitFatPointer =
-                unsafe { mem::transmute(&*syscall_context_object) };
+            let fat_ptr: DynTraitFatPointer = unsafe { mem::transmute(&*syscall_context_object) };
             let slot = syscall_registry
                 .lookup_context_object_slot(fat_ptr.vtable.methods[0] as u64)
                 .ok_or(EbpfError::SyscallNotRegistered(

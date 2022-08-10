@@ -18,10 +18,10 @@
 //! <https://www.kernel.org/doc/Documentation/networking/filter.txt>, or for a shorter version of
 //! the list of the operation codes: <https://github.com/iovisor/bpf-docs/blob/master/eBPF.md>
 
-use std::fmt;
-use std::hash::Hasher;
 use byteorder::{ByteOrder, LittleEndian};
 use hash32::{Hasher as Hasher32, Murmur3Hasher};
+use std::fmt;
+use std::hash::Hasher;
 
 /// SBF version flag
 pub const EF_SBF_V2: u32 = 0x20;
